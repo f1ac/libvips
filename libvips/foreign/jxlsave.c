@@ -402,6 +402,24 @@ vips_foreign_save_jxl_build( VipsObject *object )
 			JxlColorEncodingSetToSRGB( &jxl->color_encoding,
 				jxl->format.num_channels < 3 );
 		}
+		
+		/* create synthetic profile which overrides primaries from sRGB to Rec.2020 
+		*/
+		if (jxl->wcg == TRUE) {
+			jxl->color_encoding.primaries = JXL_PRIMARIES_2100;
+		}
+
+		/* create synthetic profile which overrides transfer function from linear/sRGB to PQ 
+		*/
+		if (jxl->pq == TRUE) {
+			jxl->color_encoding.transfer_function = JXL_TRANSFER_FUNCTION_PQ;
+		}
+
+		/* create synthetic profile which overrides transfer function from linear/sRGB to HLG 
+		*/
+		if (jxl->hlg == TRUE) {
+			jxl->color_encoding.transfer_function = JXL_TRANSFER_FUNCTION_HLG;
+		}
 
 		if( JxlEncoderSetColorEncoding( jxl->encoder, 
 			&jxl->color_encoding ) ) {
@@ -409,24 +427,6 @@ vips_foreign_save_jxl_build( VipsObject *object )
 				"JxlEncoderSetColorEncoding" );
 			return( -1 );
 		}
-	}
-	
-	/* create synthetic profile which overrides primaries from sRGB to Rec.2020 
-	*/
-	if (jxl->wcg == TRUE) {
-		jxl->color_encoding.primaries = JXL_PRIMARIES_2100;
-	}
-
-	/* create synthetic profile which overrides transfer function from linear/sRGB to PQ 
-	*/
-	if (jxl->pq == TRUE) {
-		jxl->color_encoding.transfer_function = JXL_TRANSFER_FUNCTION_PQ;
-	}
-
-	/* create synthetic profile which overrides transfer function from linear/sRGB to HLG 
-	*/
-	if (jxl->hlg == TRUE) {
-		jxl->color_encoding.transfer_function = JXL_TRANSFER_FUNCTION_HLG;
 	}
 
 	/* Render the entire image in memory. libjxl seems to be missing
