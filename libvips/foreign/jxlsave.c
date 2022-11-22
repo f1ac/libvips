@@ -84,6 +84,10 @@ typedef struct _VipsForeignSaveJxl {
 	int effort;
 	gboolean lossless;
 	int Q;
+	gboolean wcg;
+	gboolean pq;
+	gboolean hlg;
+	gboolean xyb;
 
 	/* Base image properties.
 	 */
@@ -351,7 +355,7 @@ vips_foreign_save_jxl_build( VipsObject *object )
 	/* uses_original_profile forces libjxl to not use lossy XYB
 	 * colourspace. The name is very confusing.
 	 */
-	jxl->info.uses_original_profile = jxl->lossless;
+	jxl->info.uses_original_profile = jxl->lossless && !jxl->xyb;
 
 	if( JxlEncoderSetBasicInfo( jxl->encoder, &jxl->info ) ) {
 		vips_foreign_save_jxl_error( jxl, "JxlEncoderSetBasicInfo" );
@@ -405,6 +409,24 @@ vips_foreign_save_jxl_build( VipsObject *object )
 				"JxlEncoderSetColorEncoding" );
 			return( -1 );
 		}
+	}
+	
+	/* create synthetic profile which overrides primaries from sRGB to Rec.2020 
+	*/
+	if (jxl->wcg == TRUE) {
+		jxl->color_encoding.primaries = JXL_PRIMARIES_2100;
+	}
+
+	/* create synthetic profile which overrides transfer function from linear/sRGB to PQ 
+	*/
+	if (jxl->pq == TRUE) {
+		jxl->color_encoding.transfer_function = JXL_TRANSFER_FUNCTION_PQ;
+	}
+
+	/* create synthetic profile which overrides transfer function from linear/sRGB to HLG 
+	*/
+	if (jxl->hlg == TRUE) {
+		jxl->color_encoding.transfer_function = JXL_TRANSFER_FUNCTION_HLG;
 	}
 
 	/* Render the entire image in memory. libjxl seems to be missing
@@ -552,7 +574,34 @@ vips_foreign_save_jxl_class_init( VipsForeignSaveJxlClass *class )
 		VIPS_ARGUMENT_OPTIONAL_INPUT,
 		G_STRUCT_OFFSET( VipsForeignSaveJxl, Q ),
 		0, 100, 75 );
+		
+	VIPS_ARG_BOOL(class, "wcg", 15,
+		_("Wide color gamut"),
+		_("Reinterpret color primaries to be wide gamut ones (Rec. 2100)"),
+		VIPS_ARGUMENT_OPTIONAL_INPUT,
+		G_STRUCT_OFFSET(VipsForeignSaveJxl, wcg),
+		FALSE);
 
+	VIPS_ARG_BOOL(class, "pq", 16,
+		_("Perceptual Quantizer"),
+		_("Reinterpret transfer function to be PQ"),
+		VIPS_ARGUMENT_OPTIONAL_INPUT,
+		G_STRUCT_OFFSET(VipsForeignSaveJxl, pq),
+		FALSE);
+
+	VIPS_ARG_BOOL(class, "hlg", 17,
+		_("Hybrid log gamma"),
+		_("Reinterpret tranfer function to be HLG"),
+		VIPS_ARGUMENT_OPTIONAL_INPUT,
+		G_STRUCT_OFFSET(VipsForeignSaveJxl, hlg),
+		FALSE);
+
+	VIPS_ARG_BOOL(class, "xyb", 18,
+		_("XYB encoding"),
+		_("Force lossy XYB encoding for loseless files"),
+		VIPS_ARGUMENT_OPTIONAL_INPUT,
+		G_STRUCT_OFFSET(VipsForeignSaveJxl, xyb),
+		FALSE);
 }
 
 static void
@@ -563,6 +612,10 @@ vips_foreign_save_jxl_init( VipsForeignSaveJxl *jxl )
 	jxl->effort = 7;
 	jxl->lossless = FALSE;
 	jxl->Q = 75;
+	jxl->wcg = FALSE;
+	jxl->pq = FALSE;
+	jxl->hlg = FALSE;
+	jxl->xyb = FALSE;
 }
 
 typedef struct _VipsForeignSaveJxlFile {
