@@ -88,6 +88,7 @@ typedef struct _VipsForeignSaveJxl {
 	gboolean pq;
 	gboolean hlg;
 	gboolean xyb;
+	int modular;
 
 	/* Base image properties.
 	 */
@@ -442,6 +443,8 @@ vips_foreign_save_jxl_build( VipsObject *object )
 	JxlEncoderFrameSettingsSetOption( frame_settings, 
 		JXL_ENC_FRAME_SETTING_EFFORT, jxl->effort );
 	JxlEncoderSetFrameLossless( frame_settings, jxl->lossless );
+	JxlEncoderFrameSettingsSetOption( frame_settings, 
+		JXL_ENC_FRAME_SETTING_MODULAR, jxl->modular );
 
 #ifdef DEBUG
 	vips_foreign_save_jxl_print_info( &jxl->info );
@@ -598,10 +601,17 @@ vips_foreign_save_jxl_class_init( VipsForeignSaveJxlClass *class )
 
 	VIPS_ARG_BOOL(class, "xyb", 18,
 		_("XYB encoding"),
-		_("Force lossy XYB encoding for loseless files"),
+		_("Force lossy XYB encoding"),
 		VIPS_ARGUMENT_OPTIONAL_INPUT,
 		G_STRUCT_OFFSET(VipsForeignSaveJxl, xyb),
 		FALSE);
+		
+	VIPS_ARG_INT( class, "modular", 19, 
+		_( "Modular" ), 
+		_( "-1 for auto, 0 to enforce VarDCT, 1 to enforce modular mode" ),
+		VIPS_ARGUMENT_OPTIONAL_INPUT,
+		G_STRUCT_OFFSET( VipsForeignSaveJxl, modular ),
+		-1, 1, -1 );
 }
 
 static void
@@ -616,6 +626,7 @@ vips_foreign_save_jxl_init( VipsForeignSaveJxl *jxl )
 	jxl->pq = FALSE;
 	jxl->hlg = FALSE;
 	jxl->xyb = FALSE;
+	jxl->modular = -1;
 }
 
 typedef struct _VipsForeignSaveJxlFile {
