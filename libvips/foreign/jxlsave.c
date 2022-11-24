@@ -89,6 +89,9 @@ typedef struct _VipsForeignSaveJxl {
 	gboolean hlg;
 	gboolean xyb;
 	int modular;
+	int codestream_level;
+	double min_nits;
+	double intensity_target;
 
 	/* Base image properties.
 	 */
@@ -267,6 +270,12 @@ vips_foreign_save_jxl_build( VipsObject *object )
 			"JxlDecoderSetParallelRunner" );
 		return( -1 );
 	}
+	
+	if( JxlEncoderSetCodestreamLevel( jxl->encoder, codestrem_level) ) {
+		vips_foreign_save_jxl_error( jxl, 
+			"JxlEncoderSetCodestreamLevel" );
+		return( -1 );
+	}
 
 	in = save->ready;
 
@@ -344,8 +353,13 @@ vips_foreign_save_jxl_build( VipsObject *object )
 		jxl->info.alpha_exponent_bits = 0;
 		jxl->info.alpha_bits = 0;
 	}
+	
+	jxl->info.min_nits = jxl.min_nits;
 
-	if( vips_image_get_typeof( in, "stonits" ) ) {
+	if( vips_object_argument_isset( object, "intensity_target" ) )  {
+		jxl->info.intensity_target = jxl.intensity_target;
+	}
+	else if( vips_image_get_typeof( in, "stonits" ) ) {
 		double stonits;
 
 		if( vips_image_get_double( in, "stonits", &stonits ) )
@@ -601,17 +615,38 @@ vips_foreign_save_jxl_class_init( VipsForeignSaveJxlClass *class )
 
 	VIPS_ARG_BOOL(class, "xyb", 18,
 		_("XYB encoding"),
-		_("Force lossy XYB encoding"),
+		_("Force lossy XYB encoding for lossless files"),
 		VIPS_ARGUMENT_OPTIONAL_INPUT,
 		G_STRUCT_OFFSET(VipsForeignSaveJxl, xyb),
 		FALSE);
 		
 	VIPS_ARG_INT( class, "modular", 19, 
-		_( "Modular" ), 
-		_( "-1 for auto, 0 to enforce VarDCT, 1 to enforce modular mode" ),
+		_( "Modular encoding" ), 
+		_( "-1 for autoselect, 0 for VarDCT, 1 for modular encoding" ),
 		VIPS_ARGUMENT_OPTIONAL_INPUT,
 		G_STRUCT_OFFSET( VipsForeignSaveJxl, modular ),
 		-1, 1, -1 );
+		
+	VIPS_ARG_INT( class, "codestream_level", 20, 
+		_( "Codestream level" ), 
+		_( "-1 for autoselect, 5, or 10" ),
+		VIPS_ARGUMENT_OPTIONAL_INPUT,
+		G_STRUCT_OFFSET( VipsForeignSaveJxl, codestream_level ),
+		-1, 10, -1 );
+		
+	VIPS_ARG_DOUBLE( class, "min_nits", 21, 
+		_( "Minimum intensity" ), 
+		_( "Lower bound on the intensity level present in the image in nits" ),
+		VIPS_ARGUMENT_OPTIONAL_INPUT,
+		G_STRUCT_OFFSET( VipsForeignSaveJxl, min_nits ),
+		0.0, 1000000.0, 0.0 );
+		
+	VIPS_ARG_DOUBLE( class, "intensity_target", 22, 
+		_( "Intensity target" ), 
+		_( "Upper bound on the intensity level present in the image in nits" ),
+		VIPS_ARGUMENT_OPTIONAL_INPUT,
+		G_STRUCT_OFFSET( VipsForeignSaveJxl, intensity_target ),
+		0.0, 1000000.0, 0.0 );
 }
 
 static void
@@ -627,6 +662,9 @@ vips_foreign_save_jxl_init( VipsForeignSaveJxl *jxl )
 	jxl->hlg = FALSE;
 	jxl->xyb = FALSE;
 	jxl->modular = -1;
+	jxl->codestream_level = -1;
+	jxl->min_nits = 0.0;
+	jxl->intensity_target = 0.0;
 }
 
 typedef struct _VipsForeignSaveJxlFile {
