@@ -354,10 +354,10 @@ vips_foreign_save_jxl_build( VipsObject *object )
 		jxl->info.alpha_bits = 0;
 	}
 	
-	jxl->info.min_nits = jxl.min_nits;
+	jxl->info.min_nits = jxl->min_nits;
 
 	if( vips_object_argument_isset( object, "intensity_target" ) )  {
-		jxl->info.intensity_target = jxl.intensity_target;
+		jxl->info.intensity_target = jxl->intensity_target;
 	}
 	else if( vips_image_get_typeof( in, "stonits" ) ) {
 		double stonits;
