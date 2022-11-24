@@ -271,7 +271,7 @@ vips_foreign_save_jxl_build( VipsObject *object )
 		return( -1 );
 	}
 	
-	if( JxlEncoderSetCodestreamLevel( jxl->encoder, codestream_level) ) {
+	if( JxlEncoderSetCodestreamLevel( jxl->encoder, jxl->codestream_level) ) {
 		vips_foreign_save_jxl_error( jxl, 
 			"JxlEncoderSetCodestreamLevel" );
 		return( -1 );
